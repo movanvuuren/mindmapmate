@@ -1145,6 +1145,7 @@ const TaskNode = memo(function TaskNode({ id, data, selected }: NodeProps<TaskFl
       </>) : (
         <div className="flowmap-node-text">{node.text ? textParts(node.text).map((p, i) => typeof p === 'string' ? p
           : 'href' in p ? <ExternalLink key={i} href={p.href} label={p.label} />
+          : 'tag' in p ? <span key={i} className="flowmap-tag">{p.label}</span>
           : <NoteLink key={i} linktext={p.linktext} label={p.label} links={actions.links} />) : ' '}</div>
       )}
       {data.tasks > 0 && <span className="flowmap-progress" aria-label={`${data.done} of ${data.tasks} tasks done`}>{progress(data.done, data.tasks)}</span>}

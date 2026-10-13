@@ -6,22 +6,28 @@ const WIKILINK = /\[\[([^[\]|#]*)(#[^[\]|]*)?(?:\|([^[\]]*))?\]\]/g
 // [text](url): a web or mail address opens outside Obsidian; a bare path is a note, as in Markdown. Other schemes
 // (javascript:, file:) are not links and stay plain text. A title after the url is not supported.
 const MDLINK = /\[([^[\]]+)\]\(<?([^()\s<>]+)>?\)/
-const TEXT_LINK = new RegExp(WIKILINK.source + '|' + MDLINK.source, 'g')
 const OPEN_SCHEME = /^(https?|mailto|obsidian):/i
+
+// #tag: as in Obsidian, it starts the text or follows whitespace, and holds letters, digits, _ - / with at least one non-digit.
+const TAG = /(?<=^|\s)#(?=[\p{L}\p{N}_/-]*[\p{L}_/-])[\p{L}\p{N}_/-]+/u
+const TEXT_PARTS = new RegExp([WIKILINK, MDLINK, TAG].map(r => r.source).join('|'), 'gu')
 
 export type Wikilink = { linktext: string, label: string }
 /** A [text](url) link to an address outside the vault. */
 export type ExternalLink = { href: string, label: string }
-export type TextPart = string | Wikilink | ExternalLink
+/** A #tag, drawn as a pill. `label` includes the "#". */
+export type Tag = { tag: string, label: string }
+export type TextPart = string | Wikilink | ExternalLink | Tag
 
-/** Node text as plain runs and links. A link shows its alias, else its target as Obsidian does ("Note > Heading"). */
+/** Node text as plain runs, links and tags. A link shows its alias, else its target as Obsidian does ("Note > Heading"). */
 export function textParts(text: string): TextPart[] {
   const parts: TextPart[] = []
   let last = 0
-  for (const m of text.matchAll(TEXT_LINK)) {
+  for (const m of text.matchAll(TEXT_PARTS)) {
     const [all, path, sub = '', alias, mdText, url] = m
-    let part: Wikilink | ExternalLink | undefined
-    if (mdText === undefined) part = { linktext: path + sub, label: alias?.trim() || (path + sub.replace(/^#/, path ? ' > ' : '')) }
+    let part: Wikilink | ExternalLink | Tag | undefined
+    if (all.startsWith('#')) part = { tag: all.slice(1), label: all }
+    else if (mdText === undefined) part = { linktext: path + sub, label: alias?.trim() || (path + sub.replace(/^#/, path ? ' > ' : '')) }
     else if (OPEN_SCHEME.test(url)) part = { href: url, label: mdText.trim() || url }
     else if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) part = { linktext: safeDecode(url), label: mdText.trim() || safeDecode(url) }
     if (!part) continue
