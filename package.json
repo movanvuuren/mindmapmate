@@ -4,6 +4,7 @@
   "private": true,
   "description": "Visual task mindmap board for Obsidian",
   "type": "module",
+  "engines": { "node": ">=22.12.0" },
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc --noEmit && node esbuild.config.mjs production && node scripts/scan-bundle.mjs",
