@@ -17,7 +17,7 @@ export function isBoardFile(app: App, path: string) {
 
 export function patchSetViewState(plugin: Plugin) {
   const proto = WorkspaceLeaf.prototype
-  // eslint-disable-next-line @typescript-eslint/unbound-method -- always called as original.call(leaf, ...)
+  // Always called as original.call(leaf, ...), so it keeps its `this`.
   const original = proto.setViewState
   let active = true
 
