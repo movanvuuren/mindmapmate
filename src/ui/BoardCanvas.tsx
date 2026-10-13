@@ -84,6 +84,10 @@ export interface BoardCanvasProps {
   dragPans: boolean
   /** A phone: no editing and nothing saved. The store ignores edits too; this hides and disables the editing UI. */
   readOnly: boolean
+  /** Read only, but a node's text may be edited (in `editText`'s dialog) and its checkbox ticked. A phone's default. */
+  lightEdit: boolean
+  /** Shows a dialog to edit a node's text; `done` takes the new text. Used instead of the in-board editor when `lightEdit`. */
+  editText: (text: string, done: (text: string) => void) => void
   /** F8: done and dropped branches are not drawn. A view setting, never saved in the file. */
   hideDone: boolean
   onHideDoneChange: (hide: boolean) => void
@@ -159,12 +163,18 @@ function syncNodes(nodes: BoardNode[], prev: TaskFlowNode[], editing: string | n
   })
 }
 
-function Canvas({ store, keymap, snap, wheelZoom, dragPans, readOnly, hideDone, onHideDoneChange, minimap, onMinimapChange, onSnapChange, links, copyBranch, recentFonts, onFontUsed, onNoteAction, onFirstPaint, onExport, hints, gridDots, gridColor, api }: BoardCanvasProps) {
+function Canvas({ store, keymap, snap, wheelZoom, dragPans, readOnly, lightEdit, editText, hideDone, onHideDoneChange, minimap, onMinimapChange, onSnapChange, links, copyBranch, recentFonts, onFontUsed, onNoteAction, onFirstPaint, onExport, hints, gridDots, gridColor, api }: BoardCanvasProps) {
   const rf = useReactFlow<TaskFlowNode>()
   const rfStore = useStoreApi()
   const board = useSyncExternalStore(store.subscribe, store.getBoard)
   const [editing, setEditingNow] = useState<string | null>(null)
-  const setEditing = useCallback((id: string | null) => { if (!readOnly || id === null) setEditingNow(id) }, [readOnly])
+  // Read only, a node is never edited in the board (its text box fights a phone's keyboard for focus): with `lightEdit`
+  // it opens a dialog instead (`editDialog`, set below once autoTidy exists), otherwise nothing happens.
+  const editDialog = useRef<(id: string) => void>(() => {})
+  const setEditing = useCallback((id: string | null) => {
+    if (id === null || !readOnly) setEditingNow(id)
+    else if (lightEdit) editDialog.current(id)
+  }, [readOnly, lightEdit])
   const visible = useMemo(() => visibleBoard(board, hideDone), [board, hideDone])
   const visibleRef = useRef(visible)
   visibleRef.current = visible
@@ -483,8 +493,19 @@ function Canvas({ store, keymap, snap, wheelZoom, dragPans, readOnly, hideDone, 
     if (!boardStyle(store.board).autoTidy) return
     const live = new Set(store.board.nodes.map(n => n.id))
     const roots = new Set(ids.filter(id => live.has(id)).map(id => ancestors(store.board.nodes, id).at(-1) ?? id))
-    if (roots.size) window.requestAnimationFrame(() => tidyBranches([...roots], undefined, true))
+    // The tidy runs a frame later, so carry over whether the edit that asked for it was allowed on a read-only board.
+    const allowed = store.allowed
+    if (roots.size) window.requestAnimationFrame(() => allowed ? store.allowEdits(() => tidyBranches([...roots], undefined, true)) : tidyBranches([...roots], undefined, true))
   }, [store, tidyBranches])
+
+  editDialog.current = id => {
+    const node = store.board.nodes.find(n => n.id === id)
+    if (!node) return
+    editText(node.text, text => {
+      if (text === node.text) return
+      store.allowEdits(() => { store.dispatch(setText(id, text)); autoTidy(id) })
+    })
+  }
 
   const createNode = useCallback((parent: string | null, clientX: number, clientY: number) => {
     if (store.board.nodes.some(n => n.id === parent && n.shape === 'label')) return
@@ -864,11 +885,11 @@ function Canvas({ store, keymap, snap, wheelZoom, dragPans, readOnly, hideDone, 
     }
     const action = actionFor(e.nativeEvent, keymap)
     if (!action) return // D24: everything else reaches Obsidian
-    if (readOnly && !READ_ONLY_ACTIONS.has(action)) return
+    if (readOnly && !READ_ONLY_ACTIONS.has(action) && !(lightEdit && action === 'editNode')) return
     e.preventDefault()
     e.stopPropagation()
     runAction(action)
-  }, [keymap, runAction, flyout, boardBar, selectedEdges, focusRoot, readOnly])
+  }, [keymap, runAction, flyout, boardBar, selectedEdges, focusRoot, readOnly, lightEdit])
 
   const actions = useMemo<NodeActions>(() => ({
     commitText: (id, text, then) => {
@@ -880,14 +901,18 @@ function Canvas({ store, keymap, snap, wheelZoom, dragPans, readOnly, hideDone, 
     },
     toggleCollapse: id => toggleCollapse([id]),
     // The checkbox toggles between todo and done only (D7); other statuses are set by command.
-    toggleDone: id => store.dispatch(b => setStatus([id], b.nodes.find(n => n.id === id)?.status === 'done' ? 'todo' : 'done')(b)),
+    toggleDone: id => {
+      const toggle = () => store.dispatch(b => setStatus([id], b.nodes.find(n => n.id === id)?.status === 'done' ? 'todo' : 'done')(b))
+      if (lightEdit) store.allowEdits(toggle)
+      else toggle()
+    },
     resize: (id, width, position, side) => {
       const r = snapOn.current ? snapEdge(position.x, width, side, GRID, MIN_NODE_W) : { x: position.x, width }
       store.dispatch(setWidth(id, r.width, { x: Math.round(r.x), y: Math.round(position.y) }))
     },
     links,
     readOnly,
-  }), [store, links, readOnly, addRelative, toggleCollapse, autoTidy])
+  }), [store, links, readOnly, lightEdit, addRelative, toggleCollapse, autoTidy])
 
   api.current = {
     autoTidy,

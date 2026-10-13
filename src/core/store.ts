@@ -15,13 +15,23 @@ export class BoardStore {
 
   /** A read-only store (the board on a phone) ignores edits and undo, so nothing in it can change or be saved. */
   readOnly = false
+  private allowing = 0
 
   constructor(public board: Board) {}
+
+  /** True inside `allowEdits`. */
+  get allowed() { return this.allowing > 0 }
+
+  /** Lets edits through a read-only store while `fn` runs: the few things a phone may still do (edit text, tick a task). */
+  allowEdits<T>(fn: () => T): T {
+    this.allowing++
+    try { return fn() } finally { this.allowing-- }
+  }
 
   /** Runs a command as one undo step. A command that returns the same board is a no-op. `merge` folds it into the
    *  previous step, so dragging a slider or a color picker is one undo step however many values it passes through. */
   dispatch(command: Command, merge = false) {
-    if (this.readOnly) return
+    if (this.readOnly && !this.allowing) return
     const next = command(this.board)
     if (next === this.board) return
     if (!merge || !this.past.length) this.past.push(this.board)

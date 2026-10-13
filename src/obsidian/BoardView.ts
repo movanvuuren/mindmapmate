@@ -9,6 +9,7 @@ import { BoardCanvas, type BoardLinks, type CanvasApi } from '../ui/BoardCanvas.
 import type { Keymap } from '../ui/input/keymap.ts'
 import type { ExportKind, NoteAction } from '../ui/StyleBars.tsx'
 import { openAsMarkdown, VIEW_TYPE } from './openAsBoard.ts'
+import { EditTextModal } from './EditTextModal.ts'
 
 /** What the view needs from the plugin: its settings. */
 export interface BoardHost {
@@ -17,6 +18,7 @@ export interface BoardHost {
   wheelZoom: boolean
   dragPans: boolean
   readOnly: boolean
+  lightEdit: boolean
   setSnap(snap: boolean): void
   copyBranch: boolean
   minimap: boolean
@@ -219,6 +221,8 @@ export class BoardView extends TextFileView implements HoverParent {
       wheelZoom: this.host.wheelZoom,
       dragPans: this.host.dragPans,
       readOnly: this.host.readOnly,
+      lightEdit: this.host.lightEdit,
+      editText: (text, done) => new EditTextModal(this.app, text, done).open(),
       hideDone: this.hideDone,
       onHideDoneChange: hide => this.setHideDone(hide),
       minimap: this.host.minimap,

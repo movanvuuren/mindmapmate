@@ -2,6 +2,10 @@
 
 Newest first. Only recent versions are listed here; earlier rounds are in the wiki's MindmapMate Milestones page.
 
+## 1.1.4
+- **Mobile: edit text and tick tasks.** On a phone, double-tap a node to change its text in a dialog (Obsidian's own, so the keyboard no longer flickers), and tap a task's checkbox to tick it. Everything else stays read only on mobile: moving, adding, deleting, tidy and style changes. Mobile support is still limited.
+- **Setting:** "Boards on mobile" now has three choices: Read only, Edit text and tick tasks (the new default), and Full editing (experimental). If you already saved this setting on a phone, pick the new choice there.
+
 ## 1.1.3
 - **Limited mobile support (read only):** the plugin now loads on Obsidian mobile, as an early step. Boards open read only: pan and zoom with your fingers, tap a node to select it, and tap links, tags and images. Editing, moving, adding nodes, tidy and saving are switched off, so a phone can never change or overwrite a board. Collapsed branches can't be expanded and task checkboxes can't be ticked on a phone yet.
 - **Editing on mobile is experimental:** a new setting, "Boards on mobile", can turn editing back on, but the on-screen keyboard can flicker when you edit a node. Desktop is unchanged and always editable.

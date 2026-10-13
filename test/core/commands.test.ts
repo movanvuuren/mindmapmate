@@ -134,6 +134,22 @@ describe('undo history (property test)', () => {
     store.dispatch(setText('a', 'again'))
     expect(edits).toBe(1)
   })
+
+  it('allowEdits lets a read-only store take an edit, only while it runs', () => {
+    const store = new BoardStore(small())
+    store.readOnly = true
+    expect(store.allowed).toBe(false)
+    store.allowEdits(() => {
+      expect(store.allowed).toBe(true)
+      store.dispatch(setText('a', 'typed'))
+    })
+    expect(store.allowed).toBe(false)
+    expect(store.board.nodes[0].text).toBe('typed')
+    store.dispatch(setText('a', 'blocked'))
+    expect(store.board.nodes[0].text).toBe('typed')
+    expect(() => store.allowEdits(() => { throw new Error('x') })).toThrow('x')
+    expect(store.allowed).toBe(false)
+  })
 })
 
 describe('key bindings (D25, M6 settings)', () => {

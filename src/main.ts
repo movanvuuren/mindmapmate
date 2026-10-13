@@ -27,8 +27,8 @@ interface Settings {
   wheel: 'zoom' | 'pan'
   /** What a plain left drag on empty space does: select (Space+drag pans) or pan (Space+drag selects). */
   drag: 'select' | 'pan'
-  /** Boards on mobile open read only (pan, zoom, tap links) unless this is "edit". Editing on a phone is not finished. */
-  mobile: 'read' | 'edit'
+  /** Boards on mobile: "read" is view only; "light" also edits node text (in a dialog) and ticks tasks; "edit" is everything, unfinished. */
+  mobile: 'read' | 'light' | 'edit'
   /** F16: show the minimap on boards. */
   minimap: boolean
   /** D38: copy takes the selected nodes only, or whole branches. */
@@ -53,11 +53,12 @@ interface Settings {
 }
 
 export default class MindmapMatePlugin extends Plugin implements BoardHost {
-  settings: Settings = { snap: false, wheel: 'zoom', drag: 'select', mobile: 'read', minimap: true, hints: true, gridDots: false, gridDotsOff15: true, gridColor: '', dueOverdue: '', dueToday: '', dueLater: '', copy: 'node', exportHeadings: 2, recentFonts: [], keys: {} }
+  settings: Settings = { snap: false, wheel: 'zoom', drag: 'select', mobile: 'light', minimap: true, hints: true, gridDots: false, gridDotsOff15: true, gridColor: '', dueOverdue: '', dueToday: '', dueLater: '', copy: 'node', exportHeadings: 2, recentFonts: [], keys: {} }
   keymap: Keymap = DEFAULT_KEYS
 
   get snap() { return this.settings.snap }
   get readOnly() { return Platform.isMobile && this.settings.mobile !== 'edit' }
+  get lightEdit() { return Platform.isMobile && this.settings.mobile === 'light' }
   get dragPans() { return this.settings.drag === 'pan' }
   get wheelZoom() { return this.settings.wheel !== 'pan' }
   get copyBranch() { return this.settings.copy === 'branch' }
@@ -397,8 +398,8 @@ class MindmapMateSettings extends PluginSettingTab {
         control: { type: 'dropdown', key: 'wheel', options: { zoom: 'Zoom', pan: 'Pan' } } },
       { name: 'Drag on the board', desc: 'Select: drag draws a selection box and Space+drag pans, as in Canvas. Pan: drag pans and Space+drag selects. The hand/pointer button and its shortcut swap this for the open board.',
         control: { type: 'dropdown', key: 'drag', options: { select: 'Select', pan: 'Pan' } } },
-      { name: 'Boards on mobile', desc: 'Read only: pan, zoom and tap links, with nothing that can change the file. Editable is experimental and the on-screen keyboard can misbehave. Desktop is always editable.',
-        control: { type: 'dropdown', key: 'mobile', options: { read: 'Read only', edit: 'Editable (experimental)' } } },
+      { name: 'Boards on mobile', desc: 'Read only: pan, zoom and tap links. Edit text and tick tasks: also change a node\'s text (in a dialog) and tick its checkbox. Full editing is experimental and the on-screen keyboard can misbehave. Desktop is always fully editable.',
+        control: { type: 'dropdown', key: 'mobile', options: { read: 'Read only', light: 'Edit text and tick tasks', edit: 'Full editing (experimental)' } } },
       { name: 'Copy', desc: 'What Ctrl (Cmd) + C takes from a board. Pasted nodes go beside the selected node. Cut always takes the whole branch.',
         control: { type: 'dropdown', key: 'copy', options: { node: 'The node only', branch: 'The whole branch' } } },
       { name: 'Export headings', desc: '"Export to Markdown" turns this many top levels into headings (#, ##, …). Deeper levels, and every task, are nested bullets, with no depth limit.',
