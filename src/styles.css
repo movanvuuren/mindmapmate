@@ -856,3 +856,9 @@ input.flowmap-hsl-track::-webkit-slider-thumb { box-sizing: border-box; cursor: 
 .flowmap-overlay .flowmap-cal-day.is-out { color: var(--text-faint); }
 .flowmap-overlay .flowmap-cal-day.is-today { box-shadow: inset 0 0 0 1px var(--interactive-accent); }
 .flowmap-overlay .flowmap-cal-day.is-picked { background: var(--interactive-accent); color: var(--text-on-accent); }
+
+/* Vault embeds have stable dimensions, also shared by the tidy measuring box. */
+.flowmap-embed { display: flex; flex-direction: column; width: 240px; max-width: 100%; margin: 6px 0; border: 1px solid var(--background-modifier-border); border-radius: 6px; overflow: hidden; background: var(--background-primary); white-space: normal; }
+.flowmap-embed-title { display: block; width: 100%; height: 30px; padding: 4px 8px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--link-color); font-size: 12px; border-radius: 0; background: var(--background-secondary); box-shadow: none; }
+.flowmap-embed-body { display: block; box-sizing: border-box; height: 140px; padding: 8px; overflow: auto; white-space: pre-wrap; font-size: 12px; line-height: 1.5; color: var(--text-normal); }
+.flowmap-embed-body img { display: block; width: 100%; height: 100%; object-fit: contain; cursor: pointer; }

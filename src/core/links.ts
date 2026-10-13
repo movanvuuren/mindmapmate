@@ -1,7 +1,7 @@
 // Wikilinks and [text](url) links in node text (F10, D11): split for display, and retargeted when a note moves (D19). Pure.
 
 // [[linkpath#subpath|alias]]. Obsidian forbids [ ] | # ^ in file names, so the parts can't contain them.
-const WIKILINK = /\[\[([^[\]|#]*)(#[^[\]|]*)?(?:\|([^[\]]*))?\]\]/g
+const WIKILINK = /!?\[\[([^[\]|#]*)(#[^[\]|]*)?(?:\|([^[\]]*))?\]\]/g
 
 // [text](url): a web or mail address opens outside Obsidian; a bare path is a note, as in Markdown. Other schemes
 // (javascript:, file:) are not links and stay plain text. A title after the url is not supported.
@@ -17,7 +17,8 @@ export type Wikilink = { linktext: string, label: string }
 export type ExternalLink = { href: string, label: string }
 /** A #tag, drawn as a pill. `label` includes the "#". */
 export type Tag = { tag: string, label: string }
-export type TextPart = string | Wikilink | ExternalLink | Tag
+export type Embed = Wikilink & { embed: true }
+export type TextPart = string | Wikilink | ExternalLink | Tag | Embed
 
 /** Node text as plain runs, links and tags. A link shows its alias, else its target as Obsidian does ("Note > Heading"). */
 export function textParts(text: string): TextPart[] {
@@ -25,11 +26,12 @@ export function textParts(text: string): TextPart[] {
   let last = 0
   for (const m of text.matchAll(TEXT_PARTS)) {
     const [all, path, sub = '', alias, mdText, url] = m
-    let part: Wikilink | ExternalLink | Tag | undefined
+    let part: Wikilink | ExternalLink | Tag | Embed | undefined
     if (all.startsWith('#')) part = { tag: all.slice(1), label: all }
     else if (mdText === undefined) part = { linktext: path + sub, label: alias?.trim() || (path + sub.replace(/^#/, path ? ' > ' : '')) }
     else if (OPEN_SCHEME.test(url)) part = { href: url, label: mdText.trim() || url }
     else if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) part = { linktext: safeDecode(url), label: mdText.trim() || safeDecode(url) }
+    if (part && all.startsWith('![[')) part = { ...part, embed: true } as Embed
     if (!part) continue
     if (m.index > last) parts.push(text.slice(last, m.index))
     parts.push(part)
@@ -50,7 +52,7 @@ export const displayText = (text: string) => textParts(text).map(p => typeof p =
 export const mapWikilinks = (text: string, to: (linkpath: string) => string | undefined) =>
   text.replace(WIKILINK, (all, path: string, sub = '', alias?: string) => {
     const next = path && to(path)
-    return next ? `[[${next}${sub}${alias !== undefined ? '|' + alias : ''}]]` : all
+    return next ? `${all.startsWith('!') ? '!' : ''}[[${next}${sub}${alias !== undefined ? '|' + alias : ''}]]` : all
   })
 
 /**

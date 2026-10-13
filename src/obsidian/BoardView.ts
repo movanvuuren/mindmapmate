@@ -166,6 +166,19 @@ export class BoardView extends TextFileView implements HoverParent {
   private links(): BoardLinks {
     const source = this.file?.path ?? ''
     return {
+      preview: async linktext => {
+        const file = this.app.metadataCache.getFirstLinkpathDest(getLinkpath(linktext), source)
+        if (!file) return { kind: 'missing' }
+        if (/^(png|jpe?g|gif|webp|bmp|avif)$/i.test(file.extension)) {
+          return { kind: 'image', src: this.app.vault.getResourcePath(file) }
+        }
+        return { kind: file.extension === 'md' ? 'note' : 'unsupported' }
+      },
+      watchEmbeds: refresh => {
+        const refs = [this.app.vault.on('modify', refresh), this.app.vault.on('create', refresh),
+          this.app.vault.on('delete', refresh), this.app.vault.on('rename', refresh)]
+        return () => refs.forEach(ref => this.app.vault.offref(ref))
+      },
       resolved: linktext => !!this.app.metadataCache.getFirstLinkpathDest(getLinkpath(linktext), source),
       open: (linktext, newTab) => void this.app.workspace.openLinkText(linktext, source, newTab),
       searchTag: tag => this.searchTag(tag),

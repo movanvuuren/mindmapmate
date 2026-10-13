@@ -60,6 +60,12 @@ an outline and a task list at once.
 - Search finds board text through each file's generated **Board index**. Due dates are searchable as `📅 2026-10`
   (a month) and appear in the Tags pane as `#due/2026-10-03`.
 
+### Images and note links
+- Type `![[photo.png]]` in a node to show a vault image. PNG, JPEG, GIF, WebP, BMP and AVIF are supported. Click the image or its title to open the attachment.
+- Type `![[Page]]` or `![[Page|Label]]` for a compact note link, with the same hover preview and Ctrl/Cmd-click behaviour as `[[Page]]`. Page content is not read or rendered inside the node.
+- Image previews have a fixed height, preserve aspect ratio, load lazily, and show a placeholder for missing or unsupported attachments. They refresh when vault files change.
+- Embeds remain references in the board's node text. Standalone exports currently show the target label rather than bundling attachment contents. Only vault images are loaded; remote images are not fetched.
+
 ### Views and moving around
 - **Canvas controls** (right edge): Board style; zoom; zoom to fit; focus selection; snap to grid; add node; add label;
   tidy whole board; export; focus on a branch; collapse to a level; hide done tasks; minimap.

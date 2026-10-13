@@ -14,6 +14,7 @@ Canvas gives you space to think but knows nothing about progress, and a task lis
 - **Tasks that add up.** Any node can be a task: not done, doing, blocked, done or dropped. Parents show their progress, like 2/4.
 - **Due dates that nudge.** Pick a date from the calendar. Chips turn orange on the day and red when late, and a filter shows what is due soon.
 - **Linked to your notes.** Type `[[` to link a note, hover to preview it, or turn a node into a new note. Renames and moves keep links working.
+- **Image embeds.** Use `![[photo.png]]` for vault images. Page embeds such as `![[Page]]` appear as compact note links with hover previews.
 - **Tidy in one click.** Lay a board out to the right, left, both sides or down. Fold branches, focus on one, or jump to a level.
 - **Share it anywhere.** Export a Markdown checklist, a PNG or SVG image, or a single HTML page anyone can open in a browser.
 - **It is just a note.** Each board is a `.board.md` file in your vault, with a readable outline that search and backlinks can see.

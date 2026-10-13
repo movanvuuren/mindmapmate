@@ -42,6 +42,16 @@ describe('wikilinks in node text (F10)', () => {
     expect(hasTag('issue #123 or [[A#B]]')).toBe(false)
   })
 
+  it('parses image and page embeds without losing aliases or ordinary links', () => {
+    expect(textParts('Look ![[Attachments/photo.png]] and ![[Plan|Project]] then [[Other]]')).toEqual([
+      'Look ', { linktext: 'Attachments/photo.png', label: 'Attachments/photo.png', embed: true },
+      ' and ', { linktext: 'Plan', label: 'Project', embed: true }, ' then ', { linktext: 'Other', label: 'Other' },
+    ])
+    expect(mapWikilinks('![[Plan|Project]] [[Plan]]', p => p === 'Plan' ? 'Archive/Plan' : undefined))
+      .toBe('![[Archive/Plan|Project]] [[Archive/Plan]]')
+    expect(displayText('![[Plan|Project]]')).toBe('Project')
+    expect(textParts('![[unfinished')).toEqual(['![[unfinished'])
+  })
   it('maps link paths and keeps subpath and alias', () => {
     const to = (p: string) => p === 'Loot Tables' ? 'Archive/Loot' : undefined
     expect(mapWikilinks('[[Loot Tables#Drops|drops]] [[Loot Tables]] [[Other]]', to)).toBe('[[Archive/Loot#Drops|drops]] [[Archive/Loot]] [[Other]]')

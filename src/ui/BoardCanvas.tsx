@@ -21,6 +21,7 @@ import type { Shape } from '../core/geometry.ts'
 import { boardStyle, cssFont, cssTextColor, resolveStyles, type LineLook, type NodeLook } from '../core/style.ts'
 import { BoardStyleBar, CanvasControls, ConnectorPalette, lineBarPlacement, NodePalette, nodeBarPlacement, styleLines, type Arrange, type ExportKind, type LineRef, type NoteAction, type ViewTools } from './StyleBars.tsx'
 import { Minimap } from './Minimap.tsx'
+import { NodeEmbed, type EmbedPreview } from './NodeEmbed.tsx'
 import { boardSvg } from './exportImage.ts'
 import type { HtmlColors } from './exportHtml.ts'
 import { ancestors, childrenMap, depths, shownLevel, subtreeCounts, topmost, withDescendants, type Counts } from '../core/tree.ts'
@@ -109,6 +110,8 @@ export interface BoardCanvasProps {
 
 /** F10: note links, answered by Obsidian. A link text is a wikilink target ("Note#Heading") or a link field's path. */
 export interface BoardLinks {
+  preview?: (linktext: string) => Promise<EmbedPreview>
+  watchEmbeds?: (refresh: () => void) => () => void
   resolved: (linktext: string) => boolean
   open: (linktext: string, newTab: boolean) => void
   /** Search the vault for a #tag (without the "#"). */
@@ -1149,6 +1152,7 @@ const TaskNode = memo(function TaskNode({ id, data, selected }: NodeProps<TaskFl
         )}
       </>) : (
         <div className="flowmap-node-text">{node.text ? textParts(node.text).map((p, i) => typeof p === 'string' ? p
+          : 'embed' in p ? <NodeEmbed key={i} linktext={p.linktext} label={p.label} links={actions.links} />
           : 'href' in p ? <ExternalLink key={i} href={p.href} label={p.label} />
           : 'tag' in p ? <TagPill key={i} tag={p.tag} label={p.label} links={actions.links} />
           : <NoteLink key={i} linktext={p.linktext} label={p.label} links={actions.links} />) : ' '}</div>
@@ -1530,7 +1534,7 @@ function measureSizes(container: HTMLElement, nodes: BoardNode[], counts: Readon
   const slow: number[] = []
   nodes.forEach((n, i) => {
     const shape = looks.get(n.id)?.shape ?? 'round', text = n.text.includes('[[') ? displayText(n.text) : n.text
-    if (shape === 'circle' || shape === 'diamond' || shape === 'label' || n.width || n.link || !text || text.includes('\n') || hasTag(n.text)) return void slow.push(i)
+    if (shape === 'circle' || shape === 'diamond' || shape === 'label' || n.width || n.link || !text || text.includes('\n') || hasTag(n.text) || n.text.includes('![[')) return void slow.push(i)
     const m = shapeSample(shape)
     ctx.font = m.font
     const width = ctx.measureText(text).width + m.chrome
@@ -1550,9 +1554,13 @@ function measureSizes(container: HTMLElement, nodes: BoardNode[], counts: Readon
     const text = el.createDiv()
     text.className = 'flowmap-node-text'
     // A tag pill has padding and a smaller font, so a node with tags is laid out with real pills (else it measures a line short).
-    if (hasTag(n.text)) for (const p of textParts(n.text)) {
+    if (hasTag(n.text) || n.text.includes('![[')) for (const p of textParts(n.text)) {
       if (typeof p === 'string') text.appendText(p)
-      else text.createSpan({ cls: 'tag' in p ? 'flowmap-tag' : undefined, text: p.label })
+      else if ('embed' in p && /\.(png|jpe?g|gif|webp|bmp|avif)(?:#|$)/i.test(p.linktext)) {
+        const embed = text.createSpan({ cls: 'flowmap-embed' })
+        embed.createSpan({ cls: 'flowmap-embed-title', text: p.label })
+        embed.createSpan({ cls: 'flowmap-embed-body', text: 'Preview' })
+      } else text.createSpan({ cls: 'tag' in p ? 'flowmap-tag' : undefined, text: p.label })
     } else text.textContent = (n.text.includes('[[') ? displayText(n.text) : n.text) || '\u00a0'
     // ponytail: the link line is narrowed with the text; a link wider than text plus extras is slightly underestimated.
     if (n.link) {
