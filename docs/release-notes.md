@@ -2,6 +2,19 @@
 
 Newest first. Only recent versions are listed here; earlier rounds are in the wiki's MindmapMate Milestones page.
 
+## 1.1.2
+- **Steadier tests:** the performance budget tests judge the fastest of several runs, so a busy machine no longer fails them by chance. No change to the plugin itself.
+
+## 1.1.1
+- **Image embeds:** `![[photo.png]]` in a node shows the vault image (PNG, JPEG, GIF, WebP, BMP, AVIF), with a fixed height and a placeholder when it is missing. `![[Page]]` shows a compact note link with the usual hover preview.
+- **Updated libraries:** React Flow 12.12, TypeScript 6, and current build and test tools.
+
+## 1.1.0
+- **Renamed MindmapMate (Mo)** with its own plugin id (`mindmapmate-mo`), so it can be installed next to the original.
+- **Markdown links:** `[text](url)` in a node shows the link text. Web, mail and `obsidian:` addresses open outside Obsidian; a bare path is a note link.
+- **Tags as pills:** a `#tag` in a node is drawn as a pill tinted from the node's outline color, and clicking it searches the vault for the tag. Tidy measures nodes with tags correctly, so they no longer overlap.
+- **Swap pan and select:** a "Drag on the board" setting, a hand/pointer button on the toolbar, and Shift+M switch plain drag between select and pan. When drag pans, Space+drag selects, releasing Space goes back to pan, and a drag inside a selection pans instead of moving it.
+
 ## 1.0.4
 - **About box:** the MindmapMate introduction at the top of the settings sits on its own card, as in FolderMate, and the options sit on a second card below it.
 
