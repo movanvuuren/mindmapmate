@@ -27,5 +27,4 @@ jobs:
       - run: node scripts/check-versions.mjs
       - run: npm run lint
       - run: npm run build
-      # The perf tests time real work against fixed budgets, so a slow runner can fail one once; retry before failing.
-      - run: npx vitest run --retry=2
+      - run: npm test
