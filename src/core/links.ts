@@ -41,6 +41,8 @@ export function textParts(text: string): TextPart[] {
 
 const safeDecode = (s: string) => { try { return decodeURIComponent(s) } catch { return s } }
 
+export const hasTag = (text: string) => text.includes('#') && textParts(text).some(p => typeof p !== 'string' && 'tag' in p)
+
 /** The text as it reads on the node, for measuring. */
 export const displayText = (text: string) => textParts(text).map(p => typeof p === 'string' ? p : p.label).join('')
 
