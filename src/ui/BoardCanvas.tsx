@@ -82,6 +82,8 @@ export interface BoardCanvasProps {
   wheelZoom: boolean
   /** What a plain drag does at first: pans (true) or selects. A plugin setting; the board's swap button overrides it. */
   dragPans: boolean
+  /** A phone: no editing and nothing saved. The store ignores edits too; this hides and disables the editing UI. */
+  readOnly: boolean
   /** F8: done and dropped branches are not drawn. A view setting, never saved in the file. */
   hideDone: boolean
   onHideDoneChange: (hide: boolean) => void
@@ -129,8 +131,12 @@ interface NodeActions {
   toggleDone: (id: string) => void
   resize: (id: string, width: number, position: Point, side: 'left' | 'right') => void
   links: BoardLinks
+  readOnly: boolean
 }
 const Actions = createContext<NodeActions>(null!)
+
+/** Board keys that still work on a read-only board: moving the selection and the view. Nothing that edits. */
+const READ_ONLY_ACTIONS = new Set<Action>(['selectAll', 'zoomToFit', 'zoomToSelection', 'selectUp', 'selectDown', 'selectLeft', 'selectRight', 'swapPanSelect'])
 
 export function BoardCanvas(props: BoardCanvasProps) {
   return <ReactFlowProvider><Canvas {...props} /></ReactFlowProvider>
@@ -153,11 +159,12 @@ function syncNodes(nodes: BoardNode[], prev: TaskFlowNode[], editing: string | n
   })
 }
 
-function Canvas({ store, keymap, snap, wheelZoom, dragPans, hideDone, onHideDoneChange, minimap, onMinimapChange, onSnapChange, links, copyBranch, recentFonts, onFontUsed, onNoteAction, onFirstPaint, onExport, hints, gridDots, gridColor, api }: BoardCanvasProps) {
+function Canvas({ store, keymap, snap, wheelZoom, dragPans, readOnly, hideDone, onHideDoneChange, minimap, onMinimapChange, onSnapChange, links, copyBranch, recentFonts, onFontUsed, onNoteAction, onFirstPaint, onExport, hints, gridDots, gridColor, api }: BoardCanvasProps) {
   const rf = useReactFlow<TaskFlowNode>()
   const rfStore = useStoreApi()
   const board = useSyncExternalStore(store.subscribe, store.getBoard)
-  const [editing, setEditing] = useState<string | null>(null)
+  const [editing, setEditingNow] = useState<string | null>(null)
+  const setEditing = useCallback((id: string | null) => { if (!readOnly || id === null) setEditingNow(id) }, [readOnly])
   const visible = useMemo(() => visibleBoard(board, hideDone), [board, hideDone])
   const visibleRef = useRef(visible)
   visibleRef.current = visible
@@ -572,7 +579,7 @@ function Canvas({ store, keymap, snap, wheelZoom, dragPans, hideDone, onHideDone
       autoTidy(...parents)
     }
     const onPaste = (e: ClipboardEvent) => {
-      if (!ours() || !e.clipboardData) return
+      if (readOnly || !ours() || !e.clipboardData) return
       const board = store.board
       const json = e.clipboardData.getData(CLIP_TYPE), text = e.clipboardData.getData('text/plain')
       const clip = readClip(json || text, board)
@@ -638,8 +645,8 @@ function Canvas({ store, keymap, snap, wheelZoom, dragPans, hideDone, onHideDone
   }, [store])
 
   const onDoubleClick = useCallback((e: React.MouseEvent) => {
-    if ((e.target as Element).classList.contains('react-flow__pane')) createNode(null, e.clientX, e.clientY)
-  }, [createNode])
+    if (!readOnly && (e.target as Element).classList.contains('react-flow__pane')) createNode(null, e.clientX, e.clientY)
+  }, [createNode, readOnly])
 
   // React Flow's fitView only counts measured nodes, and nodes culled by onlyRenderVisibleElements are
   // never measured. Fit to board positions instead, using measured sizes where known.
@@ -857,10 +864,11 @@ function Canvas({ store, keymap, snap, wheelZoom, dragPans, hideDone, onHideDone
     }
     const action = actionFor(e.nativeEvent, keymap)
     if (!action) return // D24: everything else reaches Obsidian
+    if (readOnly && !READ_ONLY_ACTIONS.has(action)) return
     e.preventDefault()
     e.stopPropagation()
     runAction(action)
-  }, [keymap, runAction, flyout, boardBar, selectedEdges, focusRoot])
+  }, [keymap, runAction, flyout, boardBar, selectedEdges, focusRoot, readOnly])
 
   const actions = useMemo<NodeActions>(() => ({
     commitText: (id, text, then) => {
@@ -878,7 +886,8 @@ function Canvas({ store, keymap, snap, wheelZoom, dragPans, hideDone, onHideDone
       store.dispatch(setWidth(id, r.width, { x: Math.round(r.x), y: Math.round(position.y) }))
     },
     links,
-  }), [store, links, addRelative, toggleCollapse, autoTidy])
+    readOnly,
+  }), [store, links, readOnly, addRelative, toggleCollapse, autoTidy])
 
   api.current = {
     autoTidy,
@@ -954,7 +963,7 @@ function Canvas({ store, keymap, snap, wheelZoom, dragPans, hideDone, onHideDone
           // pressed while focus was elsewhere (another pane, a text box); the click itself knows.
           if (rfStore.getState().multiSelectionActive !== e.shiftKey) rfStore.setState({ multiSelectionActive: e.shiftKey })
           // Swapped, a plain drag pans, so a press inside the selection box must pan too (not move the selection).
-          if (e.button === 0 && !e.shiftKey && !swapped && (e.target as Element).classList.contains('react-flow__pane') && boxDrag(e)) return
+          if (e.button === 0 && !e.shiftKey && !swapped && !readOnly && (e.target as Element).classList.contains('react-flow__pane') && boxDrag(e)) return
           marqueeBase.current = e.shiftKey ? { nodes: new Set(nodesRef.current.filter(n => n.selected).map(n => n.id)), edges: new Set(selectedEdges) } : null
         }}
         onClickCapture={e => { if (suppressClick.current) e.stopPropagation() }}
@@ -985,7 +994,7 @@ function Canvas({ store, keymap, snap, wheelZoom, dragPans, hideDone, onHideDone
           elevateEdgesOnSelect
           onInit={() => window.requestAnimationFrame(() => {
             // Round 9: a board with "Tidy as you add" on opens tidy, in one undo step.
-            if (boardStyle(store.board).autoTidy) tidyBranches(null)
+            if (!readOnly && boardStyle(store.board).autoTidy) tidyBranches(null)
             onFirstPaint()
           })}
           onMoveStart={e => {
@@ -1015,6 +1024,9 @@ function Canvas({ store, keymap, snap, wheelZoom, dragPans, hideDone, onHideDone
           zoomOnDoubleClick={false}
           deleteKeyCode={null}
           disableKeyboardA11y // its arrow-key moves would bypass commands
+          nodesDraggable={!readOnly}
+          nodesConnectable={!readOnly}
+          edgesReconnectable={!readOnly}
           snapToGrid={snap && !spaceHeld}
           snapGrid={[GRID, GRID]}
           minZoom={0.05}
@@ -1024,10 +1036,10 @@ function Canvas({ store, keymap, snap, wheelZoom, dragPans, hideDone, onHideDone
           {gridDots && <Background gap={GRID} offset={0.5 - GRID / 2} color={/^#[0-9a-f]{6}$/i.test(gridColor) ? gridColor : undefined} />}
           <canvas ref={overviewCanvas} className="flowmap-overview" hidden={!overview} />
           {!overview && selBox && <SelectionBox box={selBox} />}
-          {hints && <ShortcutHints keymap={keymap} editing={!!editing} nodes={nodes.filter(n => n.selected).length} lines={selectedEdges.size} wheelZoom={wheelZoom} swapped={swapped} />}
+          {hints && !readOnly && <ShortcutHints keymap={keymap} editing={!!editing} nodes={nodes.filter(n => n.selected).length} lines={selectedEdges.size} wheelZoom={wheelZoom} swapped={swapped} />}
           <Breadcrumb board={board} selected={nodes.filter(n => n.selected)} onPick={selectOnly} />
           <StyleOverlay board={board} styles={styles} nodes={nodes} selectedEdges={selectedEdges} flyout={flyout} setFlyout={setFlyout}
-            boardBar={boardBar} setBoardBar={setBoardBar} hidden={!!editing || dragging || overview} labelEdit={labelEdit} setLabelEdit={setLabelEdit}
+            boardBar={boardBar} setBoardBar={setBoardBar} hidden={!!editing || dragging || overview || readOnly} readOnly={readOnly} labelEdit={labelEdit} setLabelEdit={setLabelEdit}
             mids={mids.current} sizeOf={sizeOf} store={store} snap={snap} onSnap={() => onSnapChange(!snap)} swapped={swapped} swapKey={keymap.swapPanSelect[0] ? keyLabel(keymap.swapPanSelect[0]) : ''} onSwap={() => setSwapped(s => !s)} onFit={() => fitNodes()} onFocus={focusSelection}
             onNote={action => { const [id] = nodesRef.current.filter(n => n.selected); if (id) onNoteAction(action, id.id) }}
             onArrange={arrange} onTasks={ids => autoTidy(...ids)}
@@ -1105,7 +1117,7 @@ const TaskNode = memo(function TaskNode({ id, data, selected }: NodeProps<TaskFl
     <div ref={box} className={nodeClass(node, look.shape)} style={vars}>
       {/* D33: a selected node's outline thickens over an accent glow, like a selected line. */}
       {d && <svg className="flowmap-shape" width={w} height={h}>{selected && <path className="flowmap-node-halo" d={d} />}<path d={d} /></svg>}
-      {selected && !editing && (['left', 'right'] as const).map(side => (
+      {selected && !editing && !actions.readOnly && (['left', 'right'] as const).map(side => (
         <NodeResizeControl key={side} position={side} variant={ResizeControlVariant.Line} minWidth={MIN_NODE_W}
           onResizeEnd={(_, p) => actions.resize(id, p.width, p, side)} />
       ))}
@@ -1382,11 +1394,11 @@ const edgeTypes = { task: TaskEdge }
  * nodes, the connector palette at the selected line's middle, the line label editor, Board style and the canvas controls.
  * Its own component, so following the viewport re-renders only this, not the whole canvas.
  */
-function StyleOverlay({ board, styles, nodes, selectedEdges, flyout, setFlyout, boardBar, setBoardBar, hidden, labelEdit, setLabelEdit, mids, sizeOf, store, snap, onSnap, swapped, swapKey, onSwap, onFit, onFocus, onNote, onArrange, onTasks, setSelectedEdges, recentFonts, onFontUsed, tools }: {
+function StyleOverlay({ board, styles, nodes, selectedEdges, flyout, setFlyout, boardBar, setBoardBar, hidden, labelEdit, setLabelEdit, mids, sizeOf, store, snap, onSnap, swapped, swapKey, onSwap, readOnly, onFit, onFocus, onNote, onArrange, onTasks, setSelectedEdges, recentFonts, onFontUsed, tools }: {
   board: Board, styles: ReturnType<typeof resolveStyles>, nodes: TaskFlowNode[], selectedEdges: ReadonlySet<string>,
   flyout: string | null, setFlyout: (f: string | null) => void, boardBar: boolean, setBoardBar: (on: boolean) => void, hidden: boolean,
   labelEdit: string | null, setLabelEdit: (id: string | null) => void, mids: Map<string, Point>, sizeOf: (id: string) => Size, store: BoardStore,
-  snap: boolean, onSnap: () => void, swapped: boolean, swapKey: string, onSwap: () => void, onFit: () => void, onFocus: () => void, onNote: (action: NoteAction) => void, onArrange: (how: Arrange) => void, onTasks: (ids: string[]) => void
+  snap: boolean, onSnap: () => void, swapped: boolean, swapKey: string, onSwap: () => void, readOnly: boolean, onFit: () => void, onFocus: () => void, onNote: (action: NoteAction) => void, onArrange: (how: Arrange) => void, onTasks: (ids: string[]) => void
   setSelectedEdges: (ids: ReadonlySet<string>) => void, recentFonts: string[], onFontUsed: (font: string) => void, tools: ViewTools,
 }) {
   const [tx, ty, zoom] = useStore(s => s.transform)
@@ -1463,7 +1475,7 @@ function StyleOverlay({ board, styles, nodes, selectedEdges, flyout, setFlyout, 
       <CanvasControls zoom={zoom} boardOpen={boardBar} snap={snap} canFocus={ids.length > 0 || lines.length > 0}
         onBoardStyle={() => { setFlyout(null); setBoardBar(!boardBar) }}
         onZoomIn={() => void rf.zoomIn({ duration: 250 })} onZoomOut={() => void rf.zoomOut({ duration: 250 })}
-        onZoomReset={() => void rf.zoomTo(1, { duration: 250 })} onFit={onFit} onFocus={onFocus} onSnap={onSnap} swapped={swapped} swapKey={swapKey} onSwap={onSwap} tools={tools} />
+        onZoomReset={() => void rf.zoomTo(1, { duration: 250 })} onFit={onFit} onFocus={onFocus} onSnap={onSnap} swapped={swapped} swapKey={swapKey} onSwap={onSwap} readOnly={readOnly} tools={tools} />
     </div>
   )
 }

@@ -16,6 +16,7 @@ export interface BoardHost {
   snap: boolean
   wheelZoom: boolean
   dragPans: boolean
+  readOnly: boolean
   setSnap(snap: boolean): void
   copyBranch: boolean
   minimap: boolean
@@ -210,12 +211,14 @@ export class BoardView extends TextFileView implements HoverParent {
       this.contentEl.addClass('flowmap-view')
       this.root = createRoot(this.contentEl.createDiv({ cls: 'flowmap-root' }))
     }
+    this.store.readOnly = this.host.readOnly
     this.root.render(createElement(BoardCanvas, {
       store: this.store,
       keymap: this.host.keymap,
       snap: this.host.snap,
       wheelZoom: this.host.wheelZoom,
       dragPans: this.host.dragPans,
+      readOnly: this.host.readOnly,
       hideDone: this.hideDone,
       onHideDoneChange: hide => this.setHideDone(hide),
       minimap: this.host.minimap,

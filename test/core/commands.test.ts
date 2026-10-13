@@ -115,6 +115,25 @@ describe('undo history (property test)', () => {
     store.redo()
     expect(store.board.nodes[0].text).toBe('x')
   })
+
+  it('a read-only store ignores edits, undo and redo, and never reports an edit', () => {
+    const store = new BoardStore(small())
+    store.dispatch(setText('a', 'before'))
+    const start = store.board
+    let edits = 0
+    store.subscribe(edited => { if (edited) edits++ })
+    store.readOnly = true
+    store.dispatch(setText('a', 'changed'))
+    store.undo()
+    store.redo()
+    expect(store.board).toBe(start)
+    expect(edits).toBe(0)
+    store.reset(small()) // an external reload still lands
+    expect(store.board).not.toBe(start)
+    store.readOnly = false
+    store.dispatch(setText('a', 'again'))
+    expect(edits).toBe(1)
+  })
 })
 
 describe('key bindings (D25, M6 settings)', () => {

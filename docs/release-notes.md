@@ -2,6 +2,9 @@
 
 Newest first. Only recent versions are listed here; earlier rounds are in the wiki's MindmapMate Milestones page.
 
+## 1.1.3
+- **Mobile, read only:** the plugin now loads on Obsidian mobile. Boards open read only: pan and zoom with your fingers, tap a node to select it, and tap links, tags and images. Editing, moving, adding nodes, tidy and saving are switched off, so a phone can never change or overwrite a board. A new setting, "Boards on mobile", can turn editing back on (experimental: the on-screen keyboard can flicker when editing a node).
+
 ## 1.1.2
 - **Steadier tests:** the performance budget tests judge the fastest of several runs, so a busy machine no longer fails them by chance. No change to the plugin itself.
 

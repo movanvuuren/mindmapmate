@@ -13,11 +13,15 @@ export class BoardStore {
   private future: Board[] = []
   private listeners = new Set<(edited: boolean) => void>()
 
+  /** A read-only store (the board on a phone) ignores edits and undo, so nothing in it can change or be saved. */
+  readOnly = false
+
   constructor(public board: Board) {}
 
   /** Runs a command as one undo step. A command that returns the same board is a no-op. `merge` folds it into the
    *  previous step, so dragging a slider or a color picker is one undo step however many values it passes through. */
   dispatch(command: Command, merge = false) {
+    if (this.readOnly) return
     const next = command(this.board)
     if (next === this.board) return
     if (!merge || !this.past.length) this.past.push(this.board)
@@ -27,6 +31,7 @@ export class BoardStore {
   }
 
   undo() {
+    if (this.readOnly) return
     const prev = this.past.pop()
     if (!prev) return
     this.future.push(this.board)
@@ -34,6 +39,7 @@ export class BoardStore {
   }
 
   redo() {
+    if (this.readOnly) return
     const next = this.future.pop()
     if (!next) return
     this.past.push(this.board)

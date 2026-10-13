@@ -660,16 +660,16 @@ export type ViewTools = {
 }
 export type ExportKind = 'markdown' | 'svg' | 'png' | 'html'
 
-export function CanvasControls({ zoom, boardOpen, snap, canFocus, onBoardStyle, onZoomIn, onZoomOut, onZoomReset, onFit, onFocus, onSnap, swapped, swapKey, onSwap, tools }: {
-  zoom: number, boardOpen: boolean, snap: boolean, canFocus: boolean, swapped: boolean, swapKey: string, onSwap: () => void,
+export function CanvasControls({ zoom, boardOpen, snap, canFocus, onBoardStyle, onZoomIn, onZoomOut, onZoomReset, onFit, onFocus, onSnap, swapped, swapKey, onSwap, readOnly, tools }: {
+  zoom: number, boardOpen: boolean, snap: boolean, canFocus: boolean, readOnly: boolean, swapped: boolean, swapKey: string, onSwap: () => void,
   onBoardStyle: () => void, onZoomIn: () => void, onZoomOut: () => void, onZoomReset: () => void, onFit: () => void, onFocus: () => void, onSnap: () => void, tools: ViewTools,
 }) {
   const [levelsOpen, setLevelsOpen] = useState(false), [exportOpen, setExportOpen] = useState(false)
   const level = (l: number | 'all') => { setLevelsOpen(false); tools.onLevel(l) }
   const exportAs = (kind: ExportKind) => { setExportOpen(false); tools.onExport(kind) }
   return (
-    <div className="flowmap-controls">
-      <div className="flowmap-group"><Btn label="Board style" active={boardOpen} onClick={onBoardStyle}><Icon name="sliders-horizontal" /></Btn></div>
+    <div className={'flowmap-controls' + (readOnly ? ' is-readonly' : '')}>
+      {!readOnly && <div className="flowmap-group"><Btn label="Board style" active={boardOpen} onClick={onBoardStyle}><Icon name="sliders-horizontal" /></Btn></div>}
       <div className="flowmap-group">
         <Btn label="Zoom in" onClick={onZoomIn}><Icon name="plus" /></Btn>
         <button className="flowmap-zoom" aria-label="Reset zoom to 100%" onMouseDown={e => e.preventDefault()} onClick={onZoomReset}>{Math.round(zoom * 100)}%</button>
@@ -679,12 +679,12 @@ export function CanvasControls({ zoom, boardOpen, snap, canFocus, onBoardStyle, 
         <Btn label={(swapped ? 'Drag pans, Space+drag selects' : 'Drag selects, Space+drag pans') + (swapKey ? ` (${swapKey}): click to swap` : ': click to swap')} active={swapped} onClick={onSwap}><Icon name={swapped ? 'hand' : 'mouse-pointer-2'} /></Btn>
         <Btn label="Zoom to fit (Shift+1)" onClick={onFit}><Icon name="expand" /></Btn>
         <Btn label="Focus selection (Shift+2)" disabled={!canFocus} onClick={onFocus}><Icon name="crosshair" /></Btn>
-        <Btn label={snap ? 'Snap to grid: on' : 'Snap to grid: off'} active={snap} onClick={onSnap}><Icon name="magnet" /></Btn>
+        {!readOnly && <Btn label={snap ? 'Snap to grid: on' : 'Snap to grid: off'} active={snap} onClick={onSnap}><Icon name="magnet" /></Btn>}
       </div>
       <div className="flowmap-group">
-        <Btn label="Add node" onClick={tools.onAddNode}><Icon name="square-plus" /></Btn>
-        <Btn label="Add label" onClick={tools.onAddLabel}><Icon name="type" /></Btn>
-        <Btn label="Tidy whole board" onClick={() => tools.onTidyBoard()}><Icon name="network" /></Btn>
+        {!readOnly && <Btn label="Add node" onClick={tools.onAddNode}><Icon name="square-plus" /></Btn>}
+        {!readOnly && <Btn label="Add label" onClick={tools.onAddLabel}><Icon name="type" /></Btn>}
+        {!readOnly && <Btn label="Tidy whole board" onClick={() => tools.onTidyBoard()}><Icon name="network" /></Btn>}
         <span className="flowmap-levels">
           <Btn label="Export" active={exportOpen} onClick={() => setExportOpen(o => !o)}><Icon name="download" /></Btn>
           {exportOpen && (
@@ -698,7 +698,8 @@ export function CanvasControls({ zoom, boardOpen, snap, canFocus, onBoardStyle, 
         </span>
       </div>
       {/* Round 17, reversed in R25 (D62): the level stepper. Up shows one level more, down one less; the number opens the jump list. */}
-      <div className="flowmap-group is-levels">
+      {/* Showing levels collapses branches, which is saved, so a read-only board hides it. */}
+      <div className="flowmap-group is-levels flowmap-edit-only">
         <Btn label="Show one level more" disabled={tools.level >= tools.levels} onClick={() => level(tools.level + 1 >= tools.levels ? 'all' : tools.level + 1)}><Icon name="chevron-up" /></Btn>
         <span className="flowmap-levels">
           <button className="flowmap-zoom flowmap-levelnum" aria-label={`Showing ${tools.level} of ${tools.levels} levels; jump to a level`}
