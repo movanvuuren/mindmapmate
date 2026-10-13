@@ -1,0 +1,31 @@
+# Runs on every pull request and push to main: version consistency, lint, tests and a production build (which also scans
+# the bundle for network and dynamic-code calls). Node 22 is the oldest version the dev tooling supports; 24 is what
+# the release workflow builds with.
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: node scripts/check-versions.mjs
+      - run: npm run lint
+      - run: npm run build
+      # The perf tests time real work against fixed budgets, so a slow runner can fail one once; retry before failing.
+      - run: npx vitest run --retry=2
