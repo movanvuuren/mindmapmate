@@ -4,7 +4,7 @@ import esbuild from 'esbuild'
 import { cpSync, mkdirSync, readFileSync } from 'node:fs'
 
 const prod = process.argv[2] === 'production'
-const vaultPlugin = '../test-vault/.obsidian/plugins/mindmapmate'
+const vaultPlugin = '../test-vault/.obsidian/plugins/mindmapmate-mo'
 
 const installToVault = {
   name: 'install-to-vault',
