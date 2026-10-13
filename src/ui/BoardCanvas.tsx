@@ -1144,6 +1144,7 @@ const TaskNode = memo(function TaskNode({ id, data, selected }: NodeProps<TaskFl
       {isDue(node.due) && <span className={`flowmap-due is-${dueState(node, dayOf())}`} aria-label={`Due ${node.due}`}>{shortDay(node.due, dayOf())}</span>}
       </div>
       {node.link && (
+          : 'href' in p ? <ExternalLink key={i} href={p.href} label={p.label} />
         <div className="flowmap-node-link">↗ <NoteLink linktext={node.link} label={basename(node.link)} links={actions.links} /></div>
       )}
       {/* Round 14: a selected node has no dots, so a press there always drags the selection. */}
@@ -1181,6 +1182,15 @@ function NoteLink({ linktext, label, links }: { linktext: string, label: string,
 function fitDiamond(el: HTMLElement, diamond: boolean) {
   if (!diamond && !el.style.padding) return // nothing to undo: most nodes, most renders
   el.setCssStyles({ padding: diamond ? '0' : '', maxWidth: '', width: '' })
+/** A [text](url) link in node text. Click opens the address outside Obsidian (the system browser or mail app). */
+function ExternalLink({ href, label }: { href: string, label: string }) {
+  return (
+    <a className="external-link nodrag" href={href} aria-label={href}
+      onClick={e => { e.preventDefault(); e.stopPropagation(); window.open(href) }}
+      onDoubleClick={e => e.stopPropagation()}>{label}</a>
+  )
+}
+
   if (!diamond) return
   const w = el.offsetWidth
   if (el.classList.contains('has-width')) {
