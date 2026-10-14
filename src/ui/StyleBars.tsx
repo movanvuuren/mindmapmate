@@ -698,8 +698,7 @@ export function CanvasControls({ zoom, boardOpen, snap, canFocus, onBoardStyle, 
         </span>
       </div>
       {/* Round 17, reversed in R25 (D62): the level stepper. Up shows one level more, down one less; the number opens the jump list. */}
-      {/* Showing levels collapses branches, which is saved, so a read-only board hides it. */}
-      <div className="flowmap-group is-levels flowmap-edit-only">
+      <div className="flowmap-group is-levels">
         <Btn label="Show one level more" disabled={tools.level >= tools.levels} onClick={() => level(tools.level + 1 >= tools.levels ? 'all' : tools.level + 1)}><Icon name="chevron-up" /></Btn>
         <span className="flowmap-levels">
           <button className="flowmap-zoom flowmap-levelnum" aria-label={`Showing ${tools.level} of ${tools.levels} levels; jump to a level`}

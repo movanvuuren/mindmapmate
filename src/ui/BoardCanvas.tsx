@@ -166,7 +166,21 @@ function syncNodes(nodes: BoardNode[], prev: TaskFlowNode[], editing: string | n
 function Canvas({ store, keymap, snap, wheelZoom, dragPans, readOnly, lightEdit, editText, hideDone, onHideDoneChange, minimap, onMinimapChange, onSnapChange, links, copyBranch, recentFonts, onFontUsed, onNoteAction, onFirstPaint, onExport, hints, gridDots, gridColor, api }: BoardCanvasProps) {
   const rf = useReactFlow<TaskFlowNode>()
   const rfStore = useStoreApi()
-  const board = useSyncExternalStore(store.subscribe, store.getBoard)
+  const storeBoard = useSyncExternalStore(store.subscribe, store.getBoard)
+  // Read only, branches still open and shut, but only in this view: `localCollapsed` is the open/closed state wanted
+  // where it differs from the file, laid over the board here and never saved (the file's own flags stay as they are).
+  const [localCollapsed, setLocalCollapsed] = useState<ReadonlyMap<string, boolean>>(new Map())
+  const board = useMemo(() => {
+    if (!readOnly || !localCollapsed.size) return storeBoard
+    return { ...storeBoard, nodes: storeBoard.nodes.map(n => {
+      const shut = localCollapsed.get(n.id)
+      if (shut === undefined || shut === !!n.collapsed) return n
+      const next = { ...n }
+      if (shut) next.collapsed = true
+      else delete next.collapsed
+      return next
+    }) }
+  }, [storeBoard, localCollapsed, readOnly])
   const [editing, setEditingNow] = useState<string | null>(null)
   // Read only, a node is never edited in the board (its text box fights a phone's keyboard for focus): with `lightEdit`
   // it opens a dialog instead (`editDialog`, set below once autoTidy exists), otherwise nothing happens.
@@ -730,11 +744,20 @@ function Canvas({ store, keymap, snap, wheelZoom, dragPans, readOnly, lightEdit,
     return edges.filter(e => ids.has(e.source) && ids.has(e.target))
   }, [overview, near, rfNodes, edges])
 
+  /** Runs a collapse or expand command: saved as usual, or, read only, kept in this view only (see `localCollapsed`). */
+  const collapse = useCallback((command: Command) => {
+    if (!readOnly) return store.dispatch(command)
+    const saved = new Map(storeBoard.nodes.map(n => [n.id, !!n.collapsed]))
+    const wanted = new Map<string, boolean>()
+    for (const n of command(board).nodes) if (saved.get(n.id) !== !!n.collapsed) wanted.set(n.id, !!n.collapsed)
+    setLocalCollapsed(wanted)
+  }, [readOnly, store, board, storeBoard])
+
   const toggleCollapse = useCallback((ids: string[]) => {
-    const nodes = store.board.nodes.filter(n => ids.includes(n.id))
+    const nodes = board.nodes.filter(n => ids.includes(n.id))
     // Mixed selection: collapse everything that is open first, like a tri-state checkbox.
-    store.dispatch(setCollapsed(ids, nodes.some(n => !n.collapsed && extra.get(n.id)?.kids)))
-  }, [store, extra])
+    collapse(setCollapsed(ids, nodes.some(n => !n.collapsed && extra.get(n.id)?.kids)))
+  }, [collapse, board, extra])
 
   /** Shift+2 and the focus button (handoff): one node or line is centred at 140%; several nodes are fitted. */
   const focusSelection = useCallback(() => {
@@ -1070,7 +1093,7 @@ function Canvas({ store, keymap, snap, wheelZoom, dragPans, readOnly, lightEdit,
             onArrange={arrange} onTasks={ids => autoTidy(...ids)}
             setSelectedEdges={setSelectedEdges} recentFonts={recentFonts} onFontUsed={onFontUsed} tools={{
               levels, level: shownLevel(board.nodes), hideDone, onHideDone: () => onHideDoneChange(!hideDone), dueFilter, onDueFilter: setDueFilter,
-              onLevel: l => store.dispatch(l === 'all' ? expandAll : collapseToLevel(l)),
+              onLevel: l => collapse(l === 'all' ? expandAll : collapseToLevel(l)),
               minimap, onMinimap: () => onMinimapChange(!minimap),
               focusMode: !!focus, canFocusMode: nodes.some(n => n.selected), onFocusMode: toggleFocusMode, onAddLabel: addLabel,
               // Round 15: with one parent line selected (and no node), Add node puts the new node on it, like Tab.
