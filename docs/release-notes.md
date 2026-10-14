@@ -2,6 +2,9 @@
 
 Newest first. Only recent versions are listed here; earlier rounds are in the wiki's MindmapMate Milestones page.
 
+## 1.1.5
+- **Mobile: expand and collapse branches.** On a phone, the collapse button on a node, Expand all and the level stepper work again. They only change what you see: the open or closed state is not saved, so exploring a board never changes the file and resets when you reopen it. Mobile support is still limited (no moving, adding or deleting nodes).
+
 ## 1.1.4
 - **Mobile: edit text and tick tasks.** On a phone, double-tap a node to change its text in a dialog (Obsidian's own, so the keyboard no longer flickers), and tap a task's checkbox to tick it. Everything else stays read only on mobile: moving, adding, deleting, tidy and style changes. Mobile support is still limited.
 - **Setting:** "Boards on mobile" now has three choices: Read only, Edit text and tick tasks (the new default), and Full editing (experimental). If you already saved this setting on a phone, pick the new choice there.
